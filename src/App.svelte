@@ -1,6 +1,10 @@
 <script>
 	import { ethers } from 'ethers';
 	import Token from '../artifacts/contracts/OxyDjinn.sol/Token.json';
+	fetch("https://api.nomics.com/v1/currencies?key=your-key-here&ids=BTC,ETH,XRP&attributes=id,name,logo_url&platform-currency=ETH")
+  .then(response => response.json())
+  .then(data => console.log(data))
+
 
   const address = "0x5fbdb2315678afecb367f032d93f642f64180aa3"; // Enviroment variable/OxyDjinn token
   let amount = 0;
@@ -8,36 +12,26 @@
 
 	const provider = new ethers.providers.JsonRpcProvider(); //Localhost provider/connection to the blockchain(read only)
 	let hardhat1 = new ethers.Wallet( "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", provider )
-	console.log(hardhat1.address)
+	let hardhat2 = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
 
 	async function providerFunctions () {
-		console.log(await provider.getBlockNumber())
+
 	}
 	providerFunctions()
-
 	// Fetch token contract from the blockchain.
-	async function getContract() {
-		const oxyDjinn = new ethers.Contract(address, Token.abi, provider)
-		name = await oxyDjinn.name()
-		symbol = await oxyDjinn.symbol()
-		let balance = await oxyDjinn.balanceOf("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-		console.log(balance.toString())
-	}
-	getContract()
-
 	async function sendTokens() {
-		// The COO Contract is currently connected to the Provider,
-		// which is read-only. You need to connect to a Signer, so
-		// that you can pay to send state-changing transactions.
-		const daiWithSigner = contract.connect(signer);
+		const oxyDjinnContract = new ethers.Contract(address, Token.abi, hardhat1)
+		name = await oxyDjinnContract.name()
+		symbol = await oxyDjinnContract.symbol()
 
-		// Each DAI has 18 decimal places
-		const dai = ethers.utils.parseUnits("1.0", 18);
+		const oxyDjinnConnection = oxyDjinnContract.connect(hardhat1);
+		const coo = ethers.utils.parseUnits(amount.toString(), 18);
 
 		// Send 1 DAI to "ricmoo.firefly.eth"
-		tx = daiWithSigner.transfer("ricmoo.firefly.eth", dai);
-	}
+		let tx = oxyDjinnConnection.transfer(hardhat2, coo);
+		console.log('Transaction sent!')
 
+	}
 	// Request MetaMask provider and fetch the signer.
 	async function getSigner() {
 		// A Web3Provider wraps a standard Web3 provider, which is
@@ -64,6 +58,7 @@
 	</h2>
 	<div>
 		<input bind:value={amount} placeholder="Set amount of COO to buy">
+		<button on:click={sendTokens}>Buy Tokens</button>
 	</div>
 </main>
 
