@@ -1,10 +1,6 @@
 <script>
 	import { ethers } from 'ethers';
 	import Token from '../artifacts/contracts/OxyDjinn.sol/Token.json';
-	fetch("https://api.nomics.com/v1/currencies?key=your-key-here&ids=BTC,ETH,XRP&attributes=id,name,logo_url&platform-currency=ETH")
-  .then(response => response.json())
-  .then(data => console.log(data))
-
 
   const address = "0x5fbdb2315678afecb367f032d93f642f64180aa3"; // Enviroment variable/OxyDjinn token
   let amount = 0;
@@ -13,6 +9,19 @@
 	const provider = new ethers.providers.JsonRpcProvider(); //Localhost provider/connection to the blockchain(read only)
 	let hardhat1 = new ethers.Wallet( "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", provider )
 	let hardhat2 = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+
+	// Coingecko API for Eth price in USD.
+	async function getEthPrice() {
+		const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false');
+		const obj = await response.json();
+		console.log('Etherium', obj[1].current_price)
+		return obj[1].current_price
+	}
+	let promise = getEthPrice();
+	function handleClick() {
+		promise = getEthPrice()
+	}
+
 
 	async function providerFunctions () {
 
@@ -50,16 +59,27 @@
 </script>
 
 <main>
+
 	<div>
 		<button on:click={getSigner}>Connect MetaMask</button>
 	</div>
 	<h2>
-		The name of the token is: <h1>'{name}'</h1> and the symbol is <h1>'{symbol}'</h1>
+		The name of the token is:'{name}' and the symbol is '{symbol}'
 	</h2>
 	<div>
 		<input bind:value={amount} placeholder="Set amount of COO to buy">
 		<button on:click={sendTokens}>Buy Tokens</button>
 	</div>
+
+	<button on:click={handleClick}>
+		Fetch Etherium's current Price
+	</button>
+	{#await promise then data}
+	<h2>The price of Etherium is: {data}</h2>
+	<h2>The price of COO in Eth is: {amount / data}</h2>
+	{:catch error}
+	onpopstate. something's wrong
+	{/await}
 </main>
 
 <style>
@@ -68,13 +88,6 @@
 		padding: 1em;
 		max-width: 240px;
 		margin: 0 auto;
-	}
-
-	h1 {
-		color: #ff3e00;
-		text-transform: uppercase;
-		font-size: 4em;
-		font-weight: 100;
 	}
 
 	@media (min-width: 640px) {
