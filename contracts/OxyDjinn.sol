@@ -24,6 +24,11 @@ contract Token {
         uint256 value
     );
 
+    constructor()
+    {
+        balanceOf[msg.sender] = totalSupply;
+    }
+
     function transfer(address _to, uint256 _value)
     public
     returns (bool success)
