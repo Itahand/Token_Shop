@@ -3,10 +3,12 @@
 	import Token from '../artifacts/contracts/OxyDjinn.sol/Token.json';
 
   const address = "0x5fbdb2315678afecb367f032d93f642f64180aa3"; // Enviroment variable/OxyDjinn token
+	let name, symbol, ethPrice;
   let amount = 0;
-	let name, symbol;
+	let cooPrice = 0 ;
 
 	const provider = new ethers.providers.JsonRpcProvider(); //Localhost provider/connection to the blockchain(read only)
+	const contractCo = new ethers.Contract(address, Token.abi, provider)
 	let hardhat1 = new ethers.Wallet( "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", provider )
 	let hardhat2 = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
 
@@ -15,63 +17,61 @@
 		const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false');
 		const obj = await response.json();
 		console.log('Etherium', obj[1].current_price)
+		ethPrice = obj[1].current_price;
 		return obj[1].current_price
 	}
+
 	let promise = getEthPrice();
+
+	// Handle the fetch promise for reactive HTML
 	function handleClick() {
 		promise = getEthPrice()
+		console.log(cooPrice, log)
 	}
 
-	// Listen to events on the OxyDjinn Token
-	const checkEvents = async() => {
-		let contract = new ethers.Contract(address, Token.abi, provider)
-
-		contract.on("Transfer", (from, to, value, event) => {
-			let info = {
-				from: from,
-				to: to,
-				value: value,
-				data: event,
-			}
-			let amount = parseInt(info.value)
-			let amountTest = ethers.utils.parseUnits('3', 18)
-			console.log(info.data.blockHash)
-			console.log(info.data.transactionHash)
-		});
+	// Check transfers from the current block - 10 to the current block
+	async function checkTransfers() {
+		const block = await provider.getBlockNumber()
+		const transferEvents = await contractCo.queryFilter('Transfer', block - 10, block)
+		const last = transferEvents[transferEvents.length - 1]
+		const lastValue = await last.args[2].toString();
+		console.log(last.transactionHash, lastValue/1000000000000000000)
 	}
 
 	// Fetch token contract from the blockchain.
-	async function sendTokens() {
+	async function sendTokens(_cooPrice) {
+		cooPrice = _cooPrice;
+
 		const oxyDjinnContract = new ethers.Contract(address, Token.abi, hardhat1)
 		name = await oxyDjinnContract.name()
 		symbol = await oxyDjinnContract.symbol()
 
+
 		const oxyDjinnConnection = oxyDjinnContract.connect(hardhat1);
 		const coo = ethers.utils.parseUnits(amount.toString(), 18);
+		amount = 0;
+
 
 		// Send 1 DAI to "ricmoo.firefly.eth"
-		let tx = await oxyDjinnConnection.transfer(hardhat2, coo);
-		console.log('Transaction sent!', tx.data)
-		checkEvents();
+		const tx = await oxyDjinnConnection.transfer(hardhat2, coo);
+		const results = await tx.wait()
+		const bigNumber = results.events[0].args[2]
+		console.log('Transaction sent!', results.events[0].transactionHash, bigNumber.toString()/1000000000000000000)
+		checkTransfers()
 
 	}
-
-
 
 	// Request MetaMask provider and fetch the signer.
 	async function getSigner() {
-		// A Web3Provider wraps a standard Web3 provider, which is
-		// what MetaMask injects as window.ethereum into each page
+
 		let provider = new ethers.providers.Web3Provider(window.ethereum)
 		// MetaMask requires requesting permission to connect users accounts
 		await provider.send("eth_requestAccounts", []);
-		// The MetaMask plugin also allows signing transactions to
-		// send ether and pay to change state within the blockchain.
-		// For this, you need the account signer...
+
 		let signer = provider.getSigner()
 		console.log('Connected MetaMask!', provider)
 	}
-// Look up the current block number
+
 
 </script>
 
@@ -90,13 +90,15 @@
 	<button on:click={handleClick}>
 		Fetch Etherium's current Price
 	</button>
-	{#await promise then data}
-	<h2>The price of Etherium is: {data}</h2>
-	<h2>The price of COO in Eth is: {amount / data}</h2>
-	<button on:click={sendTokens}>Buy Tokens</button>
+	{#await promise then }
+	<h2>The price of Etherium is: {ethPrice}</h2>
+	<h2>The price of COO in Eth is: {amount/ethPrice}</h2>
+	<button on:click={sendTokens(amount/ethPrice)}>Buy Tokens</button>
 	{:catch error}
 	onpopstate. something's wrong
 	{/await}
+
+	<h1>Last bought COO at price: {cooPrice}</h1>
 </main>
 
 <style>
