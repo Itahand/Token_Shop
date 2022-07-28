@@ -38,29 +38,6 @@
 		console.log(last.transactionHash, lastValue/1000000000000000000)
 	}
 
-	// Fetch token contract from the blockchain.
-	async function sendTokens(_cooPrice) {
-		cooPrice = _cooPrice;
-
-		const oxyDjinnContract = new ethers.Contract(address, Token.abi, hardhat1)
-		name = await oxyDjinnContract.name()
-		symbol = await oxyDjinnContract.symbol()
-
-
-		const oxyDjinnConnection = oxyDjinnContract.connect(hardhat1);
-		const coo = ethers.utils.parseUnits(amount.toString(), 18);
-		amount = 0;
-
-
-		// Send 1 DAI to "ricmoo.firefly.eth"
-		const tx = await oxyDjinnConnection.transfer(hardhat2, coo);
-		const results = await tx.wait()
-		const bigNumber = results.events[0].args[2]
-		console.log('Transaction sent!', results.events[0].transactionHash, bigNumber.toString()/1000000000000000000)
-		checkTransfers()
-
-	}
-
 	// Request MetaMask provider and fetch the signer.
 	async function getSigner() {
 
@@ -70,7 +47,59 @@
 
 		let signer = provider.getSigner()
 		console.log('Connected MetaMask!', provider)
+		return signer;
 	}
+	// Send ether to OxyDjinn
+	async function chargeEther (etherPrice) {
+
+		const signer = await getSigner();
+		console.log(signer)
+		const tx = signer.sendTransaction({
+			to: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+			value: ethers.utils.parseEther(parseInt(etherPrice))
+		});
+		const results = tx.wait()
+		console.log(results)
+		return(results)
+	}
+
+	// Fetch token contract from the blockchain.
+	async function sendTokens(_cooPrice) {
+		cooPrice = _cooPrice;
+		await chargeEther(_cooPrice);
+
+
+		const oxyDjinnContract = new ethers.Contract(address, Token.abi, hardhat1)
+		name = await oxyDjinnContract.name()
+		symbol = await oxyDjinnContract.symbol()
+
+		const oxyDjinnConnection = oxyDjinnContract.connect(hardhat1);
+		const coo = ethers.utils.parseUnits(amount.toString(), 18);
+		amount = 0;
+
+		const tx = await oxyDjinnConnection.transfer(hardhat2, coo);
+		const results = await tx.wait()
+		const bigNumber = results.events[0].args[2]
+		console.log('Transaction sent!', results.events[0].transactionHash, bigNumber.toString()/1000000000000000000)
+		checkTransfers()
+	}
+
+	async function sendEther () {
+		let provider = new ethers.providers.Web3Provider(window.ethereum)
+		// MetaMask requires requesting permission to connect users accounts
+		await provider.send("eth_requestAccounts", []);
+
+		let signer = provider.getSigner()
+		console.log('Connected MetaMask!', provider)
+
+		const tx = await signer.sendTransaction({
+			to: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+			value: ethers.utils.parseEther('1')
+		});
+		const results = await tx.wait()
+		console.log(results)
+	}
+
 
 
 </script>
@@ -93,7 +122,7 @@
 	{#await promise then }
 	<h2>The price of Etherium is: {ethPrice}</h2>
 	<h2>The price of COO in Eth is: {amount/ethPrice}</h2>
-	<button on:click={sendTokens(amount/ethPrice)}>Buy Tokens</button>
+	<button on:click={sendEther}>Buy Tokens with Eth</button>
 	{:catch error}
 	onpopstate. something's wrong
 	{/await}
