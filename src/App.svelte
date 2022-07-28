@@ -22,11 +22,24 @@
 		promise = getEthPrice()
 	}
 
+	// Listen to events on the OxyDjinn Token
+	const checkEvents = async() => {
+		let contract = new ethers.Contract(address, Token.abi, provider)
 
-	async function providerFunctions () {
-
+		contract.on("Transfer", (from, to, value, event) => {
+			let info = {
+				from: from,
+				to: to,
+				value: value,
+				data: event,
+			}
+			let amount = parseInt(info.value)
+			let amountTest = ethers.utils.parseUnits('3', 18)
+			console.log(info.data.blockHash)
+			console.log(info.data.transactionHash)
+		});
 	}
-	providerFunctions()
+
 	// Fetch token contract from the blockchain.
 	async function sendTokens() {
 		const oxyDjinnContract = new ethers.Contract(address, Token.abi, hardhat1)
@@ -37,10 +50,14 @@
 		const coo = ethers.utils.parseUnits(amount.toString(), 18);
 
 		// Send 1 DAI to "ricmoo.firefly.eth"
-		let tx = oxyDjinnConnection.transfer(hardhat2, coo);
-		console.log('Transaction sent!')
+		let tx = await oxyDjinnConnection.transfer(hardhat2, coo);
+		console.log('Transaction sent!', tx.data)
+		checkEvents();
 
 	}
+
+
+
 	// Request MetaMask provider and fetch the signer.
 	async function getSigner() {
 		// A Web3Provider wraps a standard Web3 provider, which is
@@ -68,7 +85,6 @@
 	</h2>
 	<div>
 		<input bind:value={amount} placeholder="Set amount of COO to buy">
-		<button on:click={sendTokens}>Buy Tokens</button>
 	</div>
 
 	<button on:click={handleClick}>
@@ -77,6 +93,7 @@
 	{#await promise then data}
 	<h2>The price of Etherium is: {data}</h2>
 	<h2>The price of COO in Eth is: {amount / data}</h2>
+	<button on:click={sendTokens}>Buy Tokens</button>
 	{:catch error}
 	onpopstate. something's wrong
 	{/await}
